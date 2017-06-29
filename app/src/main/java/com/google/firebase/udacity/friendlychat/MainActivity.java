@@ -30,6 +30,9 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -43,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String ANONYMOUS = "anonymous";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
 
+    // Layout objects
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
     private ProgressBar mProgressBar;
@@ -53,8 +57,9 @@ public class MainActivity extends AppCompatActivity {
     private String mUsername;
 
     // Adding instances for Database classes
-    private FirebaseDatabase mFirebaseDatabase;             // Firebase database object; Entrypoint to access the database
-    private DatabaseReference mMessagesDatabaseReference;   // References an specific part of the database
+    private FirebaseDatabase    mFirebaseDatabase;          // Firebase database object; Entrypoint to access the database
+    private DatabaseReference   mMessagesDatabaseReference; // References an specific part of the database
+    private ChildEventListener  mChildEventListener;        // Listener in a child node of the database
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
         mUsername = ANONYMOUS;
 
         // Initialize objects
-        mFirebaseDatabase = FirebaseDatabase.getInstance();                                 // Instance of the database
+        mFirebaseDatabase          = FirebaseDatabase.getInstance();                        // Instance of the database
         mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("messages");    // "Pointer" to messages database
 
         // Initialize references to views
@@ -126,6 +131,43 @@ public class MainActivity extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
+
+        // Add listener into the messages node of the database
+        mChildEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                // The DataSnapshot contains data from the Firebase Database, at the specific location
+                // at the exact time the listener is triggered
+                // In this case, it will contain the message that has been added
+
+                FriendlyMessage friendlyMessage =
+                        dataSnapshot.getValue(FriendlyMessage.class);   // By passing the class, the code will deserialize the message
+                                                                        // from the database to the FriendlyMessage object
+
+                // This works because the message has the same fields as the FriendlyMessage object !
+                mMessageAdapter.add(friendlyMessage);
+
+
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+            }
+        };
+
+        mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
 
     }
 
